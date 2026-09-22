@@ -1,0 +1,141 @@
+{
+  "products": [
+    {
+      "id": "robe-sultanahmet",
+      "name": "Robe Sultanahmet",
+      "category": "robes-grandes-dames",
+      "description": "Robe longue en crêpe fluide, encolure bateau et ceinture nouée. Une pièce de réception inspirée des soirées d’Istanbul.",
+      "images": [
+        "https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-09-01T10:00:00.000Z"
+    },
+    {
+      "id": "robe-galata",
+      "name": "Robe Galata",
+      "category": "robes-grandes-dames",
+      "description": "Volume léger, manches trois-quarts et drapé délicat. Élégance discrète pour la grande dame.",
+      "images": [
+        "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-09-03T10:00:00.000Z"
+    },
+    {
+      "id": "complet-denim-pasha",
+      "name": "Complet Denim Pasha",
+      "category": "complets-jeans",
+      "description": "Veste structurée et pantalon assorti en denim stretch. Coupe nette, allure urbaine.",
+      "images": [
+        "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1582418702059-97ebafb35d09?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-09-04T10:00:00.000Z"
+    },
+    {
+      "id": "complet-indigo-nisa",
+      "name": "Complet Indigo Nisa",
+      "category": "complets-jeans",
+      "description": "Ensemble deux pièces indigo, surpiqûres contrastées et ceinture fine. Confort et présence.",
+      "images": [
+        "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-09-05T10:00:00.000Z"
+    },
+    {
+      "id": "sac-ottoman",
+      "name": "Sac Ottoman",
+      "category": "sacs-dames",
+      "description": "Sac structuré, anse en chaîne dorée et fermoir discret. Un compagnon de jour comme de soir.",
+      "images": [
+        "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-09-06T10:00:00.000Z"
+    },
+    {
+      "id": "sac-minuit-perle",
+      "name": "Sac Minuit Perle",
+      "category": "sacs-dames",
+      "description": "Petit sac de soirée, texture satinée et détails nacrés. Tenue légère, présence maximale.",
+      "images": [
+        "https://images.unsplash.com/photo-1590874103328-eac38a941954?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-09-07T10:00:00.000Z"
+    },
+    {
+      "id": "escarpin-stamboul",
+      "name": "Escarpin Stamboul",
+      "category": "chaussures-dames",
+      "description": "Escarpin à talon fin, bout amande et finition lisse. La ligne classique revisité.",
+      "images": [
+        "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-09-08T10:00:00.000Z"
+    },
+    {
+      "id": "sandale-rose-anatolie",
+      "name": "Sandale Rose d’Anatolie",
+      "category": "chaussures-dames",
+      "description": "Sandale à bride délicate, talon sculptural et palette poudrée. Pour les soirées d’été.",
+      "images": [
+        "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=900&q=80",
+        "https://images.unsplash.com/photo-1515347619252-60a6bf17b1f1?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-09-09T10:00:00.000Z"
+    },
+    {
+      "id": "ensemble-lale",
+      "name": "Ensemble Lâle",
+      "category": "habits-jeunes-filles",
+      "description": "Top fluide et jupe légère aux tons rose poudré. Une allure jeune, lumineuse et festive.",
+      "images": [
+        "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-09-10T10:00:00.000Z"
+    },
+    {
+      "id": "robe-tulipe",
+      "name": "Robe Tulipe",
+      "category": "habits-jeunes-filles",
+      "description": "Robe courte à volants, mouvement aérien et détails dorés discrets. Pour les fêtes et sorties.",
+      "images": [
+        "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-09-11T10:00:00.000Z"
+    }
+  ],
+  "announcements": [
+    {
+      "id": "welcome-collection",
+      "title": "Nouvelle collection turque",
+      "message": "Les nouvelles pièces venues de Turquie sont disponibles en boutique et sur commande WhatsApp.",
+      "active": true,
+      "updatedAt": "2026-09-21T22:07:16.472Z"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev-amina",
+      "author": "Amina K.",
+      "rating": 5,
+      "comment": "Des tissus magnifiques et un accueil chaleureux. Ma robe de cérémonie a fait l’unanimité.",
+      "createdAt": "2026-08-12T12:00:00.000Z"
+    },
+    {
+      "id": "rev-grace",
+      "author": "Grâce M.",
+      "rating": 5,
+      "comment": "J’ai commandé via WhatsApp, la pièce correspondait parfaitement aux photos. Élégance garantie.",
+      "createdAt": "2026-08-28T12:00:00.000Z"
+    },
+    {
+      "id": "rev-sarah",
+      "author": "Sarah T.",
+      "rating": 4,
+      "comment": "Boutique raffinée, très bel assortiment de sacs et de complets jeans.",
+      "createdAt": "2026-09-05T12:00:00.000Z"
+    }
+  ],
+  "pushTokens": []
+}
