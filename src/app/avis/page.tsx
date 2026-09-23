@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { useShop } from "@/context/ShopContext";
 
 export default function ReviewsPage() {
-  const { reviews, refresh } = useShop();
+  const { reviews, refresh, saveReview } = useShop();
   const [author, setAuthor] = useState("");
   const [comment, setComment] = useState("");
   const [rating, setRating] = useState(5);
@@ -12,13 +12,9 @@ export default function ReviewsPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    const res = await fetch("/api/reviews", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ author, comment, rating }),
-    });
-    if (!res.ok) {
-      setStatus("Impossible d’envoyer l’avis.");
+    const result = await saveReview({ author, comment, rating });
+    if (!result.ok) {
+      setStatus(result.error ?? "Impossible d’envoyer l’avis.");
       return;
     }
     setAuthor("");

@@ -13,13 +13,16 @@ import {
 import { createClient } from "@supabase/supabase-js";
 import { BRAND } from "@shared/constants";
 import {
+  deleteRemoteProducts,
+  fetchRemoteAnnouncements,
   fetchRemoteProducts,
-  mergeCatalog,
+  fetchRemoteReviews,
   resolveSupabaseConfig,
   sameCatalog,
-  supabasePublicConfig,
+  saveRemoteAnnouncement,
+  saveRemoteProduct,
+  saveRemoteReview,
 } from "@shared/catalog";
-import { SEED } from "@shared/seed";
 import type { Announcement, Product, Review } from "@shared/types";
 
 const FAVORITES_KEY = "gg-favorites";
@@ -40,65 +43,9 @@ type SaveResult = {
 
 const CATALOG_EVENT = "gg-products-changed";
 
-async function saveSupabaseProduct(product: Product, pin: string) {
-  const config = (await resolveSupabaseConfig()) ?? supabasePublicConfig();
-  if (!config) return false;
-  const body = {
-    id: product.id,
-    name: product.name,
-    category: product.category,
-    description: product.description,
-    images: product.images,
-    created_at: product.createdAt,
-  };
-  const response = await fetch(
-    `${config.url}/rest/v1/products?on_conflict=id`,
-    {
-      method: "POST",
-      headers: {
-        apikey: config.key,
-        Authorization: `Bearer ${config.key}`,
-        "Content-Type": "application/json",
-        Prefer: "resolution=merge-duplicates,return=minimal",
-        "x-admin-pin": pin,
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(8000),
-    },
-  );
-  return response.ok;
-}
-
 function notifyCatalogChanged() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(CATALOG_EVENT));
-}
-
-async function deleteSupabaseProducts(ids: string[], pin: string) {
-  const config = (await resolveSupabaseConfig()) ?? supabasePublicConfig();
-  if (!config || !ids.length) return false;
-  const filter = ids.map((id) => `"${id.replace(/"/g, "")}"`).join(",");
-  const response = await fetch(`${config.url}/rest/v1/products?id=in.(${filter})`, {
-    method: "DELETE",
-    headers: {
-      apikey: config.key,
-      Authorization: `Bearer ${config.key}`,
-      "x-admin-pin": pin,
-    },
-    signal: AbortSignal.timeout(8000),
-  });
-  return response.ok;
-}
-
-function readLocalProducts(): Product[] | null {
-  try {
-    const raw = localStorage.getItem(LOCAL_PRODUCTS_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Product[];
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
 }
 
 function writeLocalProducts(next: Product[], dirty: boolean) {
@@ -125,6 +72,9 @@ type ShopContextValue = {
   lockAdmin: () => void;
   saveProduct: (draft: ProductDraft) => Promise<SaveResult>;
   deleteProducts: (ids: string[]) => Promise<SaveResult>;
+  saveAnnouncement: (draft: { title: string; message: string }) => Promise<SaveResult>;
+  setAnnouncementActive: (id: string, active: boolean) => Promise<SaveResult>;
+  saveReview: (draft: { author: string; comment: string; rating: number }) => Promise<SaveResult>;
   adminFetch: (url: string, init?: RequestInit) => Promise<Response>;
 };
 
@@ -163,31 +113,29 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     if (!silent) setLoading(true);
     try {
       const localDirty = localStorage.getItem(LOCAL_PRODUCTS_DIRTY_KEY) === "1";
-      const localProducts = readLocalProducts();
-      setReviews(SEED.reviews);
-      setAnnouncements(SEED.announcements);
-
-      const remoteProducts = await fetchRemoteProducts();
+      const [remoteProducts, remoteAnnouncements, remoteReviews] = await Promise.all([
+        fetchRemoteProducts(),
+        fetchRemoteAnnouncements(),
+        fetchRemoteReviews(),
+      ]);
+      if (remoteAnnouncements) setAnnouncements(remoteAnnouncements);
+      if (remoteReviews) setReviews(remoteReviews);
       if (remoteProducts) {
-        const next = mergeCatalog(remoteProducts, localProducts, localDirty);
-        applyProducts(next);
+        applyProducts(remoteProducts);
         if (!localDirty) {
           try {
-            writeLocalProducts(next, false);
+            writeLocalProducts(remoteProducts, false);
           } catch {
             // cache locale facultative
           }
         }
         return;
       }
-
-      const res = await fetch("/api/catalog", { cache: "no-store" });
-      if (!res.ok) throw new Error("catalog");
-      const data = await res.json();
-      applyProducts(mergeCatalog(data.products ?? [], localProducts, localDirty));
+      if (!remoteProducts && !remoteAnnouncements && !remoteReviews) {
+        throw new Error("Supabase n’est pas configuré. Renseignez public/config.json.");
+      }
     } catch {
-      const fallback = readLocalProducts();
-      applyProducts(fallback?.length ? fallback : productsRef.current);
+      if (!productsRef.current.length) applyProducts([]);
     } finally {
       refreshingRef.current = false;
       setLoading(false);
@@ -239,15 +187,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       client = createClient(config.url, config.key, {
         auth: { persistSession: false },
       });
+      const onChange = () => {
+        void refresh(true);
+      };
       client
         .channel("gg-products-live")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "products" },
-          () => {
-            void refresh(true);
-          },
-        )
+        .on("postgres_changes", { event: "*", schema: "public", table: "products" }, onChange)
+        .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, onChange)
+        .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, onChange)
         .subscribe();
     });
     return () => {
@@ -319,11 +266,17 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           createdAt: existing?.createdAt ?? new Date().toISOString(),
         };
 
-        let savedRemotely = false;
+        let saved: { ok: true } | { ok: false; error: string };
         try {
-          savedRemotely = await saveSupabaseProduct(product, adminPin ?? "");
-        } catch {
-          savedRemotely = false;
+          saved = await saveRemoteProduct(product, adminPin ?? "");
+        } catch (error) {
+          saved = {
+            ok: false,
+            error: error instanceof Error ? error.message : "Impossible de joindre Supabase.",
+          };
+        }
+        if (!saved.ok) {
+          return { ok: false, storage: "supabase", error: saved.error };
         }
 
         const next = existing
@@ -332,48 +285,95 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         productsRef.current = next;
         setProducts(next);
         try {
-          writeLocalProducts(next, !savedRemotely);
+          writeLocalProducts(next, false);
         } catch {
-          try {
-            writeLocalProducts(
-              next.map((item) => ({ ...item, images: item.images.slice(0, 4) })),
-              true,
-            );
-          } catch {
-            // L’article reste visible dans la session même si le quota local est plein.
-          }
+          // Le catalogue distant est déjà à jour.
         }
         notifyCatalogChanged();
-        if (savedRemotely) void refresh(true);
-        return {
-          ok: true,
-          storage: savedRemotely ? "supabase" : "local",
-        };
+        void refresh(true);
+        return { ok: true, storage: "supabase" };
       },
       deleteProducts: async (ids) => {
         if (!ids.length) {
           return { ok: false, storage: "local", error: "Aucun article sélectionné." };
         }
-        let deletedRemotely = false;
+        let deleted: { ok: true } | { ok: false; error: string };
         try {
-          deletedRemotely = await deleteSupabaseProducts(ids, adminPin ?? "");
-        } catch {
-          deletedRemotely = false;
+          deleted = await deleteRemoteProducts(ids, adminPin ?? "");
+        } catch (error) {
+          deleted = {
+            ok: false,
+            error: error instanceof Error ? error.message : "Impossible de joindre Supabase.",
+          };
+        }
+        if (!deleted.ok) {
+          return { ok: false, storage: "supabase", error: deleted.error };
         }
         const next = productsRef.current.filter((product) => !ids.includes(product.id));
         productsRef.current = next;
         setProducts(next);
         try {
-          writeLocalProducts(next, !deletedRemotely);
+          writeLocalProducts(next, false);
         } catch {
-          return { ok: false, storage: "local", error: "Impossible de supprimer l’article." };
+          // Le catalogue distant est déjà à jour.
         }
         notifyCatalogChanged();
-        if (deletedRemotely) void refresh(true);
-        return {
-          ok: true,
-          storage: deletedRemotely ? "supabase" : "local",
+        void refresh(true);
+        return { ok: true, storage: "supabase" };
+      },
+      saveAnnouncement: async (draft) => {
+        const title = draft.title.trim();
+        const message = draft.message.trim();
+        if (!title || !message) {
+          return { ok: false, storage: "supabase", error: "Titre et message requis." };
+        }
+        const announcement: Announcement = {
+          id: crypto.randomUUID(),
+          title,
+          message,
+          active: true,
+          updatedAt: new Date().toISOString(),
         };
+        const saved = await saveRemoteAnnouncement(announcement, adminPin ?? "");
+        if (!saved.ok) return { ok: false, storage: "supabase", error: saved.error };
+        setAnnouncements((current) => [announcement, ...current]);
+        void refresh(true);
+        return { ok: true, storage: "supabase" };
+      },
+      setAnnouncementActive: async (id, active) => {
+        const current = announcements.find((item) => item.id === id);
+        if (!current) {
+          return { ok: false, storage: "supabase", error: "Annonce introuvable." };
+        }
+        const saved = await saveRemoteAnnouncement(
+          { ...current, active, updatedAt: new Date().toISOString() },
+          adminPin ?? "",
+        );
+        if (!saved.ok) return { ok: false, storage: "supabase", error: saved.error };
+        setAnnouncements((items) =>
+          items.map((item) => (item.id === id ? { ...item, active } : item)),
+        );
+        void refresh(true);
+        return { ok: true, storage: "supabase" };
+      },
+      saveReview: async (draft) => {
+        const author = draft.author.trim();
+        const comment = draft.comment.trim();
+        if (!author || !comment) {
+          return { ok: false, storage: "supabase", error: "Nom et avis requis." };
+        }
+        const review: Review = {
+          id: crypto.randomUUID(),
+          author,
+          rating: Math.min(5, Math.max(1, Number(draft.rating) || 5)),
+          comment,
+          createdAt: new Date().toISOString(),
+        };
+        const saved = await saveRemoteReview(review);
+        if (!saved.ok) return { ok: false, storage: "supabase", error: saved.error };
+        setReviews((current) => [review, ...current]);
+        void refresh(true);
+        return { ok: true, storage: "supabase" };
       },
       adminFetch: (url, init) =>
         fetch(url, {

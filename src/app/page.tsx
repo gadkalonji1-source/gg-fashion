@@ -8,7 +8,7 @@ import { SocialButtons } from "@/components/SocialButtons";
 import { useLiveProducts } from "@/hooks/useLiveProducts";
 
 export default function Home() {
-  const { products, loading } = useLiveProducts();
+  const { products, loading, error } = useLiveProducts();
   const featured = products.slice(0, 6);
 
   return (
@@ -47,6 +47,8 @@ export default function Home() {
           </div>
           {loading ? (
             <p className="italic">Chargement de la collection…</p>
+          ) : error && featured.length === 0 ? (
+            <p className="italic text-[var(--ink)]/70">{error}</p>
           ) : (
             <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
               {featured.map((p) => (

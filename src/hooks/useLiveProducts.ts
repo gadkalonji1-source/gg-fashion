@@ -2,16 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import {
-  fetchRemoteProducts,
-  mergeCatalog,
-  resolveSupabaseConfig,
-} from "@shared/catalog";
+import { fetchRemoteProducts, resolveSupabaseConfig } from "@shared/catalog";
 import type { Product } from "@shared/types";
 
 const CATALOG_EVENT = "gg-products-changed";
-const LOCAL_PRODUCTS_KEY = "gg-admin-products";
-const LOCAL_PRODUCTS_DIRTY_KEY = "gg-admin-products-dirty";
 
 type LiveState = {
   products: Product[];
@@ -34,26 +28,13 @@ function emit(next: Partial<LiveState>) {
   listeners.forEach((listener) => listener());
 }
 
-function pendingLocalProducts(): Product[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    if (localStorage.getItem(LOCAL_PRODUCTS_DIRTY_KEY) !== "1") return null;
-    const raw = localStorage.getItem(LOCAL_PRODUCTS_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Product[];
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
 async function loadLiveCatalog(silent = false) {
   if (!silent && !shared.fromRemote) emit({ loading: true });
   try {
     const remote = await fetchRemoteProducts();
     if (remote) {
       emit({
-        products: mergeCatalog(remote, pendingLocalProducts(), true),
+        products: remote,
         loading: false,
         error: null,
         fromRemote: true,
@@ -62,18 +43,22 @@ async function loadLiveCatalog(silent = false) {
     }
     if (!shared.fromRemote) {
       emit({
-        products: pendingLocalProducts() ?? shared.products,
+        products: [],
         loading: false,
         error: "Le catalogue n’a pas pu joindre la base. Vérifiez supabaseUrl dans /config.json.",
         fromRemote: false,
       });
     }
-  } catch {
+  } catch (error) {
     if (!shared.fromRemote) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Impossible de charger le catalogue en direct.";
       emit({
-        products: pendingLocalProducts() ?? shared.products,
+        products: [],
         loading: false,
-        error: "Impossible de charger le catalogue en direct.",
+        error: message,
         fromRemote: false,
       });
     }
@@ -104,15 +89,14 @@ function startLiveCatalog() {
     const client = createClient(config.url, config.key, {
       auth: { persistSession: false },
     });
+    const refresh = () => {
+      void loadLiveCatalog(true);
+    };
     client
       .channel("gg-catalogue-live")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "products" },
-        () => {
-          void loadLiveCatalog(true);
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, refresh)
       .subscribe();
   });
 }

@@ -15,7 +15,8 @@ export default function AdminPage() {
     announcements,
     saveProduct,
     deleteProducts,
-    adminFetch,
+    saveAnnouncement,
+    setAnnouncementActive,
     refresh,
   } = useShop();
   const [pin, setPin] = useState("");
@@ -151,21 +152,25 @@ export default function AdminPage() {
   async function addAnnouncement(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
-    await adminFetch("/api/announcements", {
-      method: "POST",
-      body: JSON.stringify({ title, message, active: true }),
-    });
+    setStatus("");
+    const result = await saveAnnouncement({ title, message });
+    setBusy(false);
+    if (!result.ok) {
+      setStatus(result.error ?? "Impossible de publier l’annonce.");
+      return;
+    }
     setTitle("");
     setMessage("");
-    setBusy(false);
+    setStatus("Annonce publiée. Elle est visible pour les clientes.");
     await refresh();
   }
 
   async function toggleAnnouncement(id: string, active: boolean) {
-    await adminFetch("/api/announcements", {
-      method: "PATCH",
-      body: JSON.stringify({ id, active }),
-    });
+    const result = await setAnnouncementActive(id, active);
+    if (!result.ok) {
+      setStatus(result.error ?? "Impossible de modifier l’annonce.");
+      return;
+    }
     await refresh();
   }
 
