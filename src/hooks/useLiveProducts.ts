@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-import { fetchRemoteProducts, resolveSupabaseConfig } from "@shared/catalog";
+import { createSupabaseBrowserClient, fetchRemoteProducts } from "@shared/catalog";
 import type { Product } from "@shared/types";
 
 const CATALOG_EVENT = "gg-products-changed";
@@ -45,7 +44,7 @@ async function loadLiveCatalog(silent = false) {
       emit({
         products: [],
         loading: false,
-        error: "Le catalogue n’a pas pu joindre la base. Vérifiez supabaseUrl dans /config.json.",
+        error: "Supabase n’est pas configuré. Définissez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.",
         fromRemote: false,
       });
     }
@@ -84,11 +83,8 @@ function startLiveCatalog() {
     if (document.visibilityState === "visible") void loadLiveCatalog(true);
   }, 8000);
 
-  void resolveSupabaseConfig().then((config) => {
-    if (!config) return;
-    const client = createClient(config.url, config.key, {
-      auth: { persistSession: false },
-    });
+  const client = createSupabaseBrowserClient();
+  if (client) {
     const refresh = () => {
       void loadLiveCatalog(true);
     };
@@ -98,7 +94,7 @@ function startLiveCatalog() {
       .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, refresh)
       .subscribe();
-  });
+  }
 }
 
 export function useLiveProducts() {

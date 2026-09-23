@@ -10,14 +10,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { BRAND } from "@shared/constants";
 import {
+  createSupabaseBrowserClient,
   deleteRemoteProducts,
   fetchRemoteAnnouncements,
   fetchRemoteProducts,
   fetchRemoteReviews,
-  resolveSupabaseConfig,
   sameCatalog,
   saveRemoteAnnouncement,
   saveRemoteProduct,
@@ -132,7 +131,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (!remoteProducts && !remoteAnnouncements && !remoteReviews) {
-        throw new Error("Supabase n’est pas configuré. Renseignez public/config.json.");
+        throw new Error(
+          "Supabase n’est pas configuré. Définissez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+        );
       }
     } catch {
       if (!productsRef.current.length) applyProducts([]);
@@ -181,12 +182,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    let client: ReturnType<typeof createClient> | null = null;
-    resolveSupabaseConfig().then((config) => {
-      if (cancelled || !config) return;
-      client = createClient(config.url, config.key, {
-        auth: { persistSession: false },
-      });
+    const client = createSupabaseBrowserClient();
+    if (!cancelled && client) {
       const onChange = () => {
         void refresh(true);
       };
@@ -196,7 +193,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, onChange)
         .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, onChange)
         .subscribe();
-    });
+    }
     return () => {
       cancelled = true;
       if (client) void client.removeAllChannels();

@@ -1,10 +1,8 @@
+import { createClient } from "@supabase/supabase-js";
 import { resolveCategoryId } from "./constants";
 import type { Announcement, Product, Review } from "./types";
 
 type SupabasePublicConfig = { url: string; key: string };
-
-let runtimeConfig: SupabasePublicConfig | null | undefined;
-let runtimeConfigPromise: Promise<SupabasePublicConfig | null> | null = null;
 
 function asConfig(url?: string, key?: string): SupabasePublicConfig | null {
   const cleanUrl = String(url ?? "").replace(/\/$/, "").trim();
@@ -14,44 +12,21 @@ function asConfig(url?: string, key?: string): SupabasePublicConfig | null {
 
 export function supabasePublicConfig() {
   return asConfig(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
 }
 
+export function createSupabaseBrowserClient() {
+  const config = supabasePublicConfig();
+  if (!config) return null;
+  return createClient(config.url, config.key, {
+    auth: { persistSession: false },
+  });
+}
+
 export async function resolveSupabaseConfig() {
-  if (runtimeConfig !== undefined) return runtimeConfig;
-  if (runtimeConfigPromise) return runtimeConfigPromise;
-
-  runtimeConfigPromise = (async () => {
-    const fromEnv = supabasePublicConfig();
-    if (fromEnv) {
-      runtimeConfig = fromEnv;
-      return fromEnv;
-    }
-    if (typeof window === "undefined") {
-      runtimeConfig = null;
-      return null;
-    }
-    try {
-      const response = await fetch("/config.json", { cache: "no-store" });
-      if (!response.ok) {
-        runtimeConfig = null;
-        return null;
-      }
-      const data = (await response.json()) as Record<string, string>;
-      runtimeConfig = asConfig(
-        data.supabaseUrl || data.NEXT_PUBLIC_SUPABASE_URL,
-        data.supabaseAnonKey || data.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      );
-      return runtimeConfig;
-    } catch {
-      runtimeConfig = null;
-      return null;
-    }
-  })();
-
-  return runtimeConfigPromise;
+  return supabasePublicConfig();
 }
 
 function mapImages(value: unknown): string[] {
@@ -169,7 +144,7 @@ async function restMutate(url: string, init: RequestInit) {
 export async function saveRemoteProduct(product: Product, pin: string) {
   const config = await resolveSupabaseConfig();
   if (!config) {
-    return { ok: false as const, error: "Supabase n’est pas configuré. Renseignez public/config.json." };
+    return { ok: false as const, error: "Supabase n’est pas configuré. Définissez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY." };
   }
   return restMutate(`${config.url}/rest/v1/products?on_conflict=id`, {
     method: "POST",
@@ -191,7 +166,7 @@ export async function saveRemoteProduct(product: Product, pin: string) {
 export async function deleteRemoteProducts(ids: string[], pin: string) {
   const config = await resolveSupabaseConfig();
   if (!config || !ids.length) {
-    return { ok: false as const, error: "Supabase n’est pas configuré. Renseignez public/config.json." };
+    return { ok: false as const, error: "Supabase n’est pas configuré. Définissez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY." };
   }
   const filter = ids.map((id) => `"${id.replace(/"/g, "")}"`).join(",");
   return restMutate(`${config.url}/rest/v1/products?id=in.(${filter})`, {
@@ -203,7 +178,7 @@ export async function deleteRemoteProducts(ids: string[], pin: string) {
 export async function saveRemoteAnnouncement(announcement: Announcement, pin: string) {
   const config = await resolveSupabaseConfig();
   if (!config) {
-    return { ok: false as const, error: "Supabase n’est pas configuré. Renseignez public/config.json." };
+    return { ok: false as const, error: "Supabase n’est pas configuré. Définissez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY." };
   }
   return restMutate(`${config.url}/rest/v1/announcements?on_conflict=id`, {
     method: "POST",
@@ -224,7 +199,7 @@ export async function saveRemoteAnnouncement(announcement: Announcement, pin: st
 export async function saveRemoteReview(review: Review) {
   const config = await resolveSupabaseConfig();
   if (!config) {
-    return { ok: false as const, error: "Supabase n’est pas configuré. Renseignez public/config.json." };
+    return { ok: false as const, error: "Supabase n’est pas configuré. Définissez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY." };
   }
   return restMutate(`${config.url}/rest/v1/reviews`, {
     method: "POST",
