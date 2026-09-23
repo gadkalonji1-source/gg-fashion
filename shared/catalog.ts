@@ -8,16 +8,6 @@ import type { Announcement, Product, Review } from "./types";
 
 type SupabasePublicConfig = { url: string; key: string };
 
-function readPublicValue(inlined: string | undefined, embedded: string) {
-  for (const candidate of [inlined, embedded]) {
-    const value = String(candidate ?? "")
-      .trim()
-      .replace(/^['"]|['"]$/g, "");
-    if (value && value !== "undefined" && value !== "null") return value;
-  }
-  return "";
-}
-
 function asConfig(url?: string, key?: string): SupabasePublicConfig | null {
   let cleanUrl = String(url ?? "")
     .trim()
@@ -31,10 +21,7 @@ function asConfig(url?: string, key?: string): SupabasePublicConfig | null {
 }
 
 export function supabasePublicConfig() {
-  return asConfig(
-    readPublicValue(process.env.NEXT_PUBLIC_SUPABASE_URL, EMBEDDED_SUPABASE_URL),
-    readPublicValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, EMBEDDED_SUPABASE_ANON_KEY),
-  );
+  return asConfig(EMBEDDED_SUPABASE_URL, EMBEDDED_SUPABASE_ANON_KEY);
 }
 
 export function createSupabaseBrowserClient() {

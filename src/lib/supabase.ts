@@ -3,10 +3,10 @@ import type { Announcement, Product, PushToken, Review, StoreSnapshot } from "@s
 import { EMBEDDED_SUPABASE_ANON_KEY, EMBEDDED_SUPABASE_URL } from "./supabase-public-env";
 
 function url() {
-  return (process.env.NEXT_PUBLIC_SUPABASE_URL || EMBEDDED_SUPABASE_URL || "").trim();
+  return EMBEDDED_SUPABASE_URL.trim();
 }
 function anon() {
-  return (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || EMBEDDED_SUPABASE_ANON_KEY || "").trim();
+  return EMBEDDED_SUPABASE_ANON_KEY.trim();
 }
 function service() {
   return process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
