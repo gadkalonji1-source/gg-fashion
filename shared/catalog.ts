@@ -18,17 +18,15 @@ function asConfig(url?: string, key?: string): SupabasePublicConfig | null {
 
 export function supabasePublicConfig() {
   return asConfig(
-    "https://gxvxrnojyleclecmgpyst.supabase.co",
-    "sb_publishable_l0V71CkC6UXkIXy8tBadUQ_w-89nm76",
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
 }
 
 export function createSupabaseBrowserClient() {
-  return createClient(
-    "https://gxvxrnojyleclecmgpyst.supabase.co",
-    "sb_publishable_l0V71CkC6UXkIXy8tBadUQ_w-89nm76",
-    { auth: { persistSession: false } },
-  );
+  const config = supabasePublicConfig();
+  if (!config) return null;
+  return createClient(config.url, config.key, { auth: { persistSession: false } });
 }
 
 export async function resolveSupabaseConfig() {
@@ -100,8 +98,14 @@ async function restSelect(table: string, order: string) {
 }
 
 export async function fetchRemoteProducts(): Promise<Product[] | null> {
-  const rows = await restSelect("products", "created_at.desc");
-  return rows ? rows.map(mapCatalogProduct) : null;
+  const client = createSupabaseBrowserClient();
+  if (!client) return null;
+  const { data, error } = await client
+    .from("products")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => mapCatalogProduct(row as Record<string, unknown>));
 }
 
 function mapAnnouncement(row: Record<string, unknown>): Announcement {
