@@ -1,8 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import {
-  EMBEDDED_SUPABASE_ANON_KEY,
-  EMBEDDED_SUPABASE_URL,
-} from "../src/lib/supabase-public-env";
 import { resolveCategoryId } from "./constants";
 import type { Announcement, Product, Review } from "./types";
 
@@ -21,15 +17,18 @@ function asConfig(url?: string, key?: string): SupabasePublicConfig | null {
 }
 
 export function supabasePublicConfig() {
-  return asConfig(EMBEDDED_SUPABASE_URL, EMBEDDED_SUPABASE_ANON_KEY);
+  return asConfig(
+    "https://gxvxrnojyleclecmgpyst.supabase.co",
+    "sb_publishable_l0V71CkC6UXkIXy8tBadUQ_w-89nm76",
+  );
 }
 
 export function createSupabaseBrowserClient() {
-  const config = supabasePublicConfig();
-  if (!config) return null;
-  return createClient(config.url, config.key, {
-    auth: { persistSession: false },
-  });
+  return createClient(
+    "https://gxvxrnojyleclecmgpyst.supabase.co",
+    "sb_publishable_l0V71CkC6UXkIXy8tBadUQ_w-89nm76",
+    { auth: { persistSession: false } },
+  );
 }
 
 export async function resolveSupabaseConfig() {

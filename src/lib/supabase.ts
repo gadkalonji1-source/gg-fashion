@@ -1,26 +1,16 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Announcement, Product, PushToken, Review, StoreSnapshot } from "@shared/types";
-import { EMBEDDED_SUPABASE_ANON_KEY, EMBEDDED_SUPABASE_URL } from "./supabase-public-env";
-
-function url() {
-  return EMBEDDED_SUPABASE_URL.trim();
-}
-function anon() {
-  return EMBEDDED_SUPABASE_ANON_KEY.trim();
-}
-function service() {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
-}
 
 export function isSupabaseConfigured() {
-  return Boolean(url() && (service() || anon()));
+  return true;
 }
 
 export function supabaseAdmin(): SupabaseClient | null {
-  if (!url()) return null;
-  const key = service() || anon();
-  if (!key) return null;
-  return createClient(url(), key, { auth: { persistSession: false } });
+  return createClient(
+    "https://gxvxrnojyleclecmgpyst.supabase.co",
+    "sb_publishable_l0V71CkC6UXkIXy8tBadUQ_w-89nm76",
+    { auth: { persistSession: false } },
+  );
 }
 
 function mapProduct(row: Record<string, unknown>): Product {
