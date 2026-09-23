@@ -1,19 +1,39 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+  EMBEDDED_SUPABASE_ANON_KEY,
+  EMBEDDED_SUPABASE_URL,
+} from "../src/lib/supabase-public-env";
 import { resolveCategoryId } from "./constants";
 import type { Announcement, Product, Review } from "./types";
 
 type SupabasePublicConfig = { url: string; key: string };
 
+function readPublicValue(inlined: string | undefined, embedded: string) {
+  for (const candidate of [inlined, embedded]) {
+    const value = String(candidate ?? "")
+      .trim()
+      .replace(/^['"]|['"]$/g, "");
+    if (value && value !== "undefined" && value !== "null") return value;
+  }
+  return "";
+}
+
 function asConfig(url?: string, key?: string): SupabasePublicConfig | null {
-  const cleanUrl = String(url ?? "").replace(/\/$/, "").trim();
-  const cleanKey = String(key ?? "").trim();
+  let cleanUrl = String(url ?? "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "")
+    .replace(/\/+$/, "");
+  const cleanKey = String(key ?? "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
+  if (cleanUrl && !/^https?:\/\//i.test(cleanUrl)) cleanUrl = `https://${cleanUrl}`;
   return cleanUrl && cleanKey ? { url: cleanUrl, key: cleanKey } : null;
 }
 
 export function supabasePublicConfig() {
   return asConfig(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    readPublicValue(process.env.NEXT_PUBLIC_SUPABASE_URL, EMBEDDED_SUPABASE_URL),
+    readPublicValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, EMBEDDED_SUPABASE_ANON_KEY),
   );
 }
 
